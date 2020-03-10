@@ -1,2 +1,6 @@
+# Build Artifacts
 bin/
 obj/
+
+# Visual Studio Code
+.vscode/
