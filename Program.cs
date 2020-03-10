@@ -9,6 +9,9 @@ using static System.Console;
 
 namespace HelloWorld
 {
+	///<summary>
+	///Hashing code from: http://csharphelper.com/blog/2018/07/perform-image-hashing-in-c/
+	///</summary>
     class Program
     {
         static String subPath = @"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets";
