@@ -40,35 +40,39 @@ namespace HelloWorld
             var hashes = ScanTargetFolder(targetFolder);
 
             var assetPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), subPath);
-            WriteLine($"Path: {assetPath}");
-
-            var count = Directory.GetFiles(targetFolder, "*.jpg").Length;
+            var nextPictureNumber = Directory.GetFiles(targetFolder, "*.jpg").Length + 1;
 
             if (Directory.Exists(assetPath))
             {
-                foreach (var fullPath in Directory.GetFiles(assetPath))
+                var counter = 0;
+
+                foreach (var assetFullPath in Directory.GetFiles(assetPath))
                 {
-                    var image = Image.FromFile(fullPath);
+                    var image = Image.FromFile(assetFullPath);
                     if (image.RawFormat.Equals(ImageFormat.Jpeg))
                     {
-                        var assetFilename = Path.GetFileName(fullPath);
-
+                        var assetFilename = Path.GetFileName(assetFullPath);
                         var hash = ProcessImage(image);
-                        if (hashes.Contains(hash))
-                        {
-                            WriteLine($"It seems that {assetFilename} does exist already at the target folder -> skipped");
-                        }
-                        else
-                        {
-                            count++;
 
-                            var targetFilename = Path.Combine(targetFolder, $"{count:0000}.jpg");
+                        if (!Exists(hash, hashes))
+                        {
+                            counter++;
 
-                            WriteLine($"Copy {assetFilename} to {targetFilename}");
-                            File.Copy(fullPath, targetFilename);
+                            var targetFilename = $"{nextPictureNumber++:0000}.jpg";
+                            var targetFullPath = Path.Combine(targetFolder, targetFilename);
+                            while (File.Exists(targetFullPath))
+                            {
+                                targetFilename = $"{nextPictureNumber++:0000}.jpg";
+                                targetFullPath = Path.Combine(targetFolder, targetFilename);
+                            }
+
+                            WriteLine($"{assetFilename} seems to be new - copying it to {targetFolder} as {targetFilename}");
+                            File.Copy(assetFullPath, targetFullPath, false);
                         }
                     }
                 }
+
+                WriteLine($"Number of copied images: {counter}");
             }
             else
             {
@@ -76,14 +80,30 @@ namespace HelloWorld
             }
         }
 
-        private ISet<string> ScanTargetFolder(string targetFolder)
+        private bool Exists(string hashCode, ISet<string> existingHashCodes)
+        {
+            bool result = false;
+
+            foreach (var hashCodeToCheck in existingHashCodes)
+            {
+                if (GenerateScore(hashCodeToCheck, hashCode) > 0.95f)
+                {
+                    result = true;
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        private HashSet<string> ScanTargetFolder(string targetFolder)
         {
             if (string.IsNullOrWhiteSpace(targetFolder))
             {
                 throw new ArgumentException("Invalid target folder specified (null, empty, or whitespaces only)");
             }
 
-            var hashSet = new HashSet<string>();
+            var hashes = new HashSet<string>();
 
             if (Directory.Exists(targetFolder))
             {
@@ -93,12 +113,34 @@ namespace HelloWorld
                     if (image.RawFormat.Equals(ImageFormat.Jpeg))
                     {
                         var hash = ProcessImage(image);
-                        hashSet.Add(hash);
+                        hashes.Add(hash);
                     }
                 }
             }
 
-            return hashSet;
+            return hashes;
+        }
+
+        private float GenerateScore(Image original, Image copy)
+        {
+            var hashCodeOriginal = ProcessImage(original);
+            var hashCodeCopy = ProcessImage(copy);
+
+            return GenerateScore(hashCodeOriginal, hashCodeCopy);
+        }
+
+        private float GenerateScore(string hash1, string hash2)
+        {
+            int score = 0;
+            for (int i = 0; i < hash1.Length; i++)
+            {
+                if (hash1[i] != hash2[i])
+                {
+                    score++;
+                }
+            }
+
+            return (hash1.Length - score) / (float)hash1.Length;
         }
 
         private string ProcessImage(Image original)
