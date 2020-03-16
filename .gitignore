@@ -4,3 +4,7 @@ obj/
 
 # Visual Studio Code
 .vscode/
+
+# JetBrains
+.idea/
+*.iml

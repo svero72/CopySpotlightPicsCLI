@@ -4,17 +4,17 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
-
+using Svero.CopySpotlightPics.Models;
 using static System.Console;
 
-namespace HelloWorld
+namespace Svero.CopySpotlightPics
 {
 	///<summary>
 	///Hashing code from: http://csharphelper.com/blog/2018/07/perform-image-hashing-in-c/
 	///</summary>
     class Program
     {
-        static String subPath = @"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets";
+        private const string SubPath = @"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets";
 
         static void Main(string[] args)
         {
@@ -34,12 +34,12 @@ namespace HelloWorld
             if (!Directory.Exists(targetFolder))
             {
                 WriteLine($"The specified target folder \"{targetFolder}\" does not exist");
-                return;
+                Directory.CreateDirectory(targetFolder);
             }
 
-            var hashes = ScanTargetFolder(targetFolder);
+            var hashes = ScanFolder(targetFolder);
 
-            var assetPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), subPath);
+            var assetPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), SubPath);
             var nextPictureNumber = Directory.GetFiles(targetFolder, "*.jpg").Length + 1;
 
             if (Directory.Exists(assetPath))
@@ -49,12 +49,14 @@ namespace HelloWorld
                 foreach (var assetFullPath in Directory.GetFiles(assetPath))
                 {
                     var image = Image.FromFile(assetFullPath);
-                    if (image.RawFormat.Equals(ImageFormat.Jpeg))
+                    if (image.RawFormat.Equals(ImageFormat.Jpeg) && image.Width >= 1600)
                     {
                         var assetFilename = Path.GetFileName(assetFullPath);
                         var hash = ProcessImage(image);
 
-                        if (!Exists(hash, hashes))
+                        var picture = SearchByHash(hash, hashes);
+
+                        if (picture == null)
                         {
                             counter++;
 
@@ -69,6 +71,14 @@ namespace HelloWorld
                             WriteLine($"{assetFilename} seems to be new - copying it to {targetFolder} as {targetFilename}");
                             File.Copy(assetFullPath, targetFullPath, false);
                         }
+                        else
+                        {
+                            WriteLine($"Skip {assetFullPath} - It already exists as {picture.Path}");
+                        }
+                    }
+                    else
+                    {
+                        WriteLine($"Skip {assetFullPath} - Wrong format ({image.RawFormat}) or wrong width ({image.Width})");
                     }
                 }
 
@@ -80,13 +90,13 @@ namespace HelloWorld
             }
         }
 
-        private bool Exists(string hashCode, ISet<string> existingHashCodes)
+        private bool Exists(string hashCode, Dictionary<string, SpotlightPicture> existingHashCodes)
         {
             bool result = false;
 
             foreach (var hashCodeToCheck in existingHashCodes)
             {
-                if (GenerateScore(hashCodeToCheck, hashCode) > 0.95f)
+                if (GenerateScore(hashCodeToCheck.Key, hashCode) > 0.95f)
                 {
                     result = true;
                     break;
@@ -96,24 +106,48 @@ namespace HelloWorld
             return result;
         }
 
-        private HashSet<string> ScanTargetFolder(string targetFolder)
+        private SpotlightPicture? SearchByHash(string hashCode, Dictionary<string, SpotlightPicture> hashes)
         {
-            if (string.IsNullOrWhiteSpace(targetFolder))
+            SpotlightPicture? picture = null;
+            
+            foreach (var item in hashes)
+            {
+                if (GenerateScore(item.Key, hashCode) > 0.95f)
+                {
+                    picture = item.Value;
+                    break;
+                }
+            }
+
+            return picture;
+        }
+
+        private Dictionary<string, SpotlightPicture> ScanFolder(string folder)
+        {
+            if (string.IsNullOrWhiteSpace(folder))
             {
                 throw new ArgumentException("Invalid target folder specified (null, empty, or whitespaces only)");
             }
 
-            var hashes = new HashSet<string>();
+            var hashes = new Dictionary<string, SpotlightPicture>();
 
-            if (Directory.Exists(targetFolder))
+            if (Directory.Exists(folder))
             {
-                foreach (var fullPath in Directory.GetFiles(targetFolder, "*.jpg"))
+                foreach (var fullPath in Directory.GetFiles(folder, "*.jpg"))
                 {
                     var image = Image.FromFile(fullPath);
                     if (image.RawFormat.Equals(ImageFormat.Jpeg))
                     {
                         var hash = ProcessImage(image);
-                        hashes.Add(hash);
+                        if (hashes.ContainsKey(hash))
+                        {
+                            var existing = hashes[hash];
+                            WriteLine($"{existing.Path} has the same hash as {fullPath}");
+                        }
+                        else
+                        {
+                            hashes.Add(hash, new SpotlightPicture() { Hash = hash, Path = fullPath});
+                        }
                     }
                 }
             }
@@ -161,12 +195,12 @@ namespace HelloWorld
 
             if (targetWidth < 1)
             {
-                throw new ArgumentOutOfRangeException("Invalid target width specified (less then 1)");
+                throw new ArgumentOutOfRangeException(nameof(targetWidth), "Invalid target width specified (less then 1)");
             }
 
             if (targetHeight < 1)
             {
-                throw new ArgumentOutOfRangeException("Invalid target height specified (less then 1)");
+                throw new ArgumentOutOfRangeException(nameof(targetHeight),"Invalid target height specified (less then 1)");
             }
 
             Bitmap target = new Bitmap(targetWidth, targetHeight);
@@ -184,13 +218,13 @@ namespace HelloWorld
 
         private Bitmap ToMonochrome(Image image)
         {
-            var colorMatrix = new ColorMatrix(new float[][] 
+            var colorMatrix = new ColorMatrix(new[]
             {
-                new float[] {0.299f, 0.299f, 0.299f, 0, 0},
-                new float[] {0.587f, 0.587f, 0.587f, 0, 0},
-                new float[] {0.114f, 0.114f, 0.114f, 0, 0},
-                new float[] { 0, 0, 0, 1, 0},
-                new float[] { 0, 0, 0, 0, 1}
+                new[] {0.299f, 0.299f, 0.299f, 0.000f, 0.000f},
+                new[] {0.587f, 0.587f, 0.587f, 0.000f, 0.000f},
+                new[] {0.114f, 0.114f, 0.114f, 0.000f, 0.000f},
+                new[] {0.000f, 0.000f, 0.000f, 1.000f, 0.000f},
+                new[] {0.000f, 0.000f, 0.000f, 0.000f, 1.000f}
             });
 
             var attributes = new ImageAttributes();
