@@ -10,31 +10,31 @@ namespace Svero.CopySpotlightPics.Models
         public string? Path { get; set; }
 
         /// <summary>
-        /// Gets the picture hash of the picture. This is NOT the same value as the .NET hash code.
+        /// Gets the code of the picture.
         /// </summary>
-        public string Hash { get; }
+        public string PictureCode { get; }
 
         /// <summary>
-        /// Creates a new instance and sets the picture hash to the specified value.
+        /// Creates a new instance and sets the picture code to the specified value.
         /// </summary>
-        /// <param name="hash">Picture hash value (not null or blank)</param>
+        /// <param name="pictureCode">Picture code (not null or blank)</param>
         /// <exception cref="ArgumentException">If hash is invalid (null or blank)</exception>
-        public SpotlightPicture(string hash)
+        public SpotlightPicture(string pictureCode)
         {
-            if (string.IsNullOrWhiteSpace(hash))
+            if (string.IsNullOrWhiteSpace(pictureCode))
             {
                 throw new ArgumentException("Invalid hash code");
             }
             
-            Hash = hash;
+            PictureCode = pictureCode;
         }
 
         /// <summary>
         /// Creates a new instance and sets the properties to the specified values.
         /// </summary>
-        /// <param name="hash">Hash value (not null or blank)</param>
+        /// <param name="pictureCode">Code value (not null or blank)</param>
         /// <param name="path">Picture path (maybe null)</param>
-        public SpotlightPicture(string hash, string path) : this(hash)
+        public SpotlightPicture(string pictureCode, string path) : this(pictureCode)
         {
             Path = path?.Trim();
         }
@@ -43,7 +43,7 @@ namespace Svero.CopySpotlightPics.Models
         /// Checks if the specified object is equal to this instance.
         /// </summary>
         /// <param name="obj">Object to check with</param>
-        /// <returns>True if equal (same hash code), false if not</returns>
+        /// <returns>True if equal (same picture code), false if not</returns>
         public override bool Equals(object? obj)
         {
             if (obj == null)
@@ -51,7 +51,7 @@ namespace Svero.CopySpotlightPics.Models
                 return false;
             }
 
-            if (object.ReferenceEquals(this, obj))
+            if (ReferenceEquals(this, obj))
             {
                 return true;
             }
@@ -61,7 +61,7 @@ namespace Svero.CopySpotlightPics.Models
                 return false;
             }
 
-            return Hash.Equals(other.Hash);
+            return PictureCode.Equals(other.PictureCode);
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Svero.CopySpotlightPics.Models
         /// <returns>Hash code</returns>
         public override int GetHashCode()
         {
-            return Hash.GetHashCode();
+            return PictureCode.GetHashCode();
         }
     }
 }

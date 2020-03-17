@@ -10,80 +10,102 @@ using static System.Console;
 
 namespace Svero.CopySpotlightPics
 {
-	///<summary>
-	///Hashing code from: http://csharphelper.com/blog/2018/07/perform-image-hashing-in-c/
-	///</summary>
-    class Program
+    ///<summary>
+    ///Hashing code from: http://csharphelper.com/blog/2018/07/perform-image-hashing-in-c/
+    ///</summary>
+    internal static class Program
     {
-        private const string SubPath = @"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets";
+        private const string DefaultAssetPath =
+            @"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets";
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             if (args.Length < 1)
             {
-                WriteLine("Usage: dotnet run <target_folder>");
+                WriteLine("Usage: dotnet run [<source_folder>] <target_folder>");
                 return;
             }
 
-            var targetFolder = args[0];
-            var app = new Program();
-            app.Run(targetFolder);
-        }
+            string targetFolder, sourceFolder;
 
-        private void Run(string targetFolder)
-        {
+            if (args.Length == 1)
+            {
+                sourceFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), DefaultAssetPath);
+                targetFolder = args[0];
+            }
+            else
+            {
+                sourceFolder = args[0];
+                targetFolder = args[1];
+            }
+
+            if (!Directory.Exists(sourceFolder))
+            {
+                WriteLine($"The source folder {sourceFolder} does not exist");
+            }
+
             if (!Directory.Exists(targetFolder))
             {
-                WriteLine($"The specified target folder \"{targetFolder}\" does not exist");
+                WriteLine($"Creating target folder \"{targetFolder}\"");
                 Directory.CreateDirectory(targetFolder);
             }
 
-            var hashes = ScanFolder(targetFolder);
+            var hashes = ImageTools.ScanFolder(targetFolder, "*.jpg");
 
-            var assetPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), SubPath);
             var nextPictureNumber = Directory.GetFiles(targetFolder, "*.jpg").Length + 1;
 
-            if (Directory.Exists(assetPath))
+            if (Directory.Exists(sourceFolder))
             {
                 var counter = 0;
 
-                foreach (var assetFullPath in Directory.GetFiles(assetPath))
+                foreach (var candidateFile in Directory.GetFiles(sourceFolder))
                 {
-                    var image = Image.FromFile(assetFullPath);
-                    if (!image.RawFormat.Equals(ImageFormat.Jpeg))
+                    try
                     {
-                        WriteLine($"Skip {assetFullPath} - Wrong format ({image.RawFormat})");
-                    }
-                    else if (image.Width < 1600)
-                    {
-                        WriteLine($"Skip {assetFullPath} - Wrong width ({image.Width})");
-                    }
-                    else
-                    {
-                        var assetFilename = Path.GetFileName(assetFullPath);
-                        var hash = ProcessImage(image);
-
-                        var picture = SearchByHash(hash, hashes);
-
-                        if (picture == null)
+                        var image = Image.FromFile(candidateFile);
+                        if (!image.RawFormat.Equals(ImageFormat.Jpeg))
                         {
-                            counter++;
-
-                            var targetFilename = $"{nextPictureNumber++:0000}.jpg";
-                            var targetFullPath = Path.Combine(targetFolder, targetFilename);
-                            while (File.Exists(targetFullPath))
-                            {
-                                targetFilename = $"{nextPictureNumber++:0000}.jpg";
-                                targetFullPath = Path.Combine(targetFolder, targetFilename);
-                            }
-
-                            WriteLine($"{assetFilename} seems to be new - copying it to {targetFolder} as {targetFilename}");
-                            File.Copy(assetFullPath, targetFullPath, false);
+                            WriteLine($"Skip {candidateFile} - Wrong format ({image.RawFormat})");
+                        }
+                        else if (image.Width < 1600)
+                        {
+                            WriteLine($"Skip {candidateFile} - Wrong width ({image.Width})");
                         }
                         else
                         {
-                            WriteLine($"Skip {assetFullPath} - It already exists as {picture.Path}");
+                            var fileName = Path.GetFileName(candidateFile);
+                            var hash = ImageTools.ProcessImage(image);
+
+                            var picture = ImageTools.SearchByCode(hash, hashes);
+
+                            if (picture == null)
+                            {
+                                counter++;
+
+                                var targetFilename = $"{nextPictureNumber++:0000}.jpg";
+                                var targetFullPath = Path.Combine(targetFolder, targetFilename);
+                                while (File.Exists(targetFullPath))
+                                {
+                                    targetFilename = $"{nextPictureNumber++:0000}.jpg";
+                                    targetFullPath = Path.Combine(targetFolder, targetFilename);
+                                }
+
+                                WriteLine(
+                                    $"{fileName} seems to be new - copying it to {targetFolder} " +
+                                    $"as {targetFilename}");
+                                File.Copy(candidateFile, targetFullPath, false);
+                            }
+                            else
+                            {
+                                WriteLine($"Skip {candidateFile} - It already exists as {picture.Path}");
+                            }
                         }
+                    }
+                    catch (OutOfMemoryException ex)
+                    {
+                        WriteLine($"The file {candidateFile} is not a valid image or has an " +
+                                  $"unsupported format: {ex.Message}");
                     }
                 }
 
@@ -91,195 +113,8 @@ namespace Svero.CopySpotlightPics
             }
             else
             {
-                WriteLine($"Path \"{assetPath}\" not found");
+                WriteLine($"Path \"{sourceFolder}\" not found");
             }
-        }
-
-        private bool Exists(string hashCode, HashSet<SpotlightPicture> existingPictures)
-        {
-            bool result = false;
-
-            foreach (var pictureToCheck in existingPictures)
-            {
-                if (GenerateScore(pictureToCheck.Hash, hashCode) > 0.95f)
-                {
-                    result = true;
-                    break;
-                }
-            }
-
-            return result;
-        }
-
-        private SpotlightPicture? SearchByHash(string hashCode, HashSet<SpotlightPicture> pictures)
-        {
-            return pictures.FirstOrDefault(currentPicture => GenerateScore(currentPicture.Hash, hashCode) > 0.95f);
-        }
-
-        private HashSet<SpotlightPicture> ScanFolder(string folder)
-        {
-            if (string.IsNullOrWhiteSpace(folder))
-            {
-                throw new ArgumentException("Invalid target folder specified (null, empty, or whitespaces only)");
-            }
-
-            var foundPictures = new HashSet<SpotlightPicture>();
-
-            if (!Directory.Exists(folder)) return foundPictures;
-            
-            foreach (var pictureFile in Directory.GetFiles(folder, "*.jpg"))
-            {
-                var image = Image.FromFile(pictureFile);
-                if (image.RawFormat.Equals(ImageFormat.Jpeg))
-                {
-                    var hash = ProcessImage(image);
-                        
-                    var existingPicture = foundPictures
-                        .FirstOrDefault(m => m.Hash.Equals(hash));
-                        
-                    if (existingPicture == null)
-                    {
-                        foundPictures.Add(new SpotlightPicture(hash, pictureFile));
-                    }
-                    else
-                    {
-                        WriteLine($"{existingPicture.Path} has the same hash as {pictureFile}");
-                    }
-                }
-            }
-
-            return foundPictures;
-        }
-
-        private float GenerateScore(Image original, Image copy)
-        {
-            var hashCodeOriginal = ProcessImage(original);
-            var hashCodeCopy = ProcessImage(copy);
-
-            return GenerateScore(hashCodeOriginal, hashCodeCopy);
-        }
-
-        private float GenerateScore(string hash1, string hash2)
-        {
-            int score = 0;
-            for (int i = 0; i < hash1.Length; i++)
-            {
-                if (hash1[i] != hash2[i])
-                {
-                    score++;
-                }
-            }
-
-            return (hash1.Length - score) / (float)hash1.Length;
-        }
-
-        private string ProcessImage(Image original)
-        {
-            var scaled = ScaleTo(original, 9, 9, InterpolationMode.High);
-            var monochrome = ToMonochrome(scaled);
-            var hashCode = GetHashCode(monochrome);
-
-            return hashCode;
-        }
-
-        private Bitmap ScaleTo(Image original, int targetWidth, int targetHeight, InterpolationMode mode)
-        {
-            if (original == null)
-            {
-                throw new ArgumentException("Invalid bitmap specified (null)");
-            }
-
-            if (targetWidth < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(targetWidth), "Invalid target width specified (less then 1)");
-            }
-
-            if (targetHeight < 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(targetHeight),"Invalid target height specified (less then 1)");
-            }
-
-            Bitmap target = new Bitmap(targetWidth, targetHeight);
-
-            using (Graphics graphics = Graphics.FromImage(target))
-            {
-                RectangleF sourceRect = new RectangleF(-0.5f, -0.5f, original.Width, original.Height);
-                Rectangle targetRect = new Rectangle(0, 0, targetWidth, targetHeight);
-                graphics.InterpolationMode = mode;
-                graphics.DrawImage(original, targetRect, sourceRect, GraphicsUnit.Pixel);
-            }
-
-            return target;
-        }
-
-        private Bitmap ToMonochrome(Image image)
-        {
-            var colorMatrix = new ColorMatrix(new[]
-            {
-                new[] {0.299f, 0.299f, 0.299f, 0.000f, 0.000f},
-                new[] {0.587f, 0.587f, 0.587f, 0.000f, 0.000f},
-                new[] {0.114f, 0.114f, 0.114f, 0.000f, 0.000f},
-                new[] {0.000f, 0.000f, 0.000f, 1.000f, 0.000f},
-                new[] {0.000f, 0.000f, 0.000f, 0.000f, 1.000f}
-            });
-
-            var attributes = new ImageAttributes();
-            attributes.SetColorMatrix(colorMatrix);
-
-            Point[] points =
-            {
-                new Point(0, 0),
-                new Point(image.Width, 0),
-                new Point(0, image.Height)
-            };
-
-            Rectangle rectangle = new Rectangle(0, 0, image.Width, image.Height);
-
-            Bitmap result = new Bitmap(image.Width, image.Height);
-            using (Graphics graphics = Graphics.FromImage(result))
-            {
-                graphics.DrawImage(image, points, rectangle, GraphicsUnit.Pixel, attributes);
-            }
-
-            return result;
-        }
-    
-        private string GetHashCode(Bitmap bitmap)
-        {
-            var rowHashCode = string.Empty;
-            var colHashCode = string.Empty;
-
-            for (int r = 0; r < 8; r++)
-            {
-                for (int c = 0; c < 8; c++)
-                {
-                    if (bitmap.GetPixel(c + 1, r).R >= bitmap.GetPixel(c, r).R)
-                    {
-                        rowHashCode += "1";
-                    }
-                    else
-                    {
-                        rowHashCode += "0";
-                    }
-                }
-            }
-
-            for (int c = 0; c < 8; c++)
-            {
-                for (int r = 0; r < 8; r++)
-                {
-                    if (bitmap.GetPixel(c, r + 1).R >= bitmap.GetPixel(c, r).R)
-                    {
-                        colHashCode += "1";
-                    }
-                    else
-                    {
-                        colHashCode += "0";
-                    }
-                }
-            }
-
-            return $"{rowHashCode},{colHashCode}";
         }
     }
 }
