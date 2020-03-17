@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using Svero.CopySpotlightPics.Models;
 using static System.Console;
 
@@ -49,7 +50,15 @@ namespace Svero.CopySpotlightPics
                 foreach (var assetFullPath in Directory.GetFiles(assetPath))
                 {
                     var image = Image.FromFile(assetFullPath);
-                    if (image.RawFormat.Equals(ImageFormat.Jpeg) && image.Width >= 1600)
+                    if (!image.RawFormat.Equals(ImageFormat.Jpeg))
+                    {
+                        WriteLine($"Skip {assetFullPath} - Wrong format ({image.RawFormat})");
+                    }
+                    else if (image.Width < 1600)
+                    {
+                        WriteLine($"Skip {assetFullPath} - Wrong width ({image.Width})");
+                    }
+                    else
                     {
                         var assetFilename = Path.GetFileName(assetFullPath);
                         var hash = ProcessImage(image);
@@ -76,10 +85,6 @@ namespace Svero.CopySpotlightPics
                             WriteLine($"Skip {assetFullPath} - It already exists as {picture.Path}");
                         }
                     }
-                    else
-                    {
-                        WriteLine($"Skip {assetFullPath} - Wrong format ({image.RawFormat}) or wrong width ({image.Width})");
-                    }
                 }
 
                 WriteLine($"Number of copied images: {counter}");
@@ -90,13 +95,13 @@ namespace Svero.CopySpotlightPics
             }
         }
 
-        private bool Exists(string hashCode, Dictionary<string, SpotlightPicture> existingHashCodes)
+        private bool Exists(string hashCode, HashSet<SpotlightPicture> existingPictures)
         {
             bool result = false;
 
-            foreach (var hashCodeToCheck in existingHashCodes)
+            foreach (var pictureToCheck in existingPictures)
             {
-                if (GenerateScore(hashCodeToCheck.Key, hashCode) > 0.95f)
+                if (GenerateScore(pictureToCheck.Hash, hashCode) > 0.95f)
                 {
                     result = true;
                     break;
@@ -106,53 +111,44 @@ namespace Svero.CopySpotlightPics
             return result;
         }
 
-        private SpotlightPicture? SearchByHash(string hashCode, Dictionary<string, SpotlightPicture> hashes)
+        private SpotlightPicture? SearchByHash(string hashCode, HashSet<SpotlightPicture> pictures)
         {
-            SpotlightPicture? picture = null;
-            
-            foreach (var item in hashes)
-            {
-                if (GenerateScore(item.Key, hashCode) > 0.95f)
-                {
-                    picture = item.Value;
-                    break;
-                }
-            }
-
-            return picture;
+            return pictures.FirstOrDefault(currentPicture => GenerateScore(currentPicture.Hash, hashCode) > 0.95f);
         }
 
-        private Dictionary<string, SpotlightPicture> ScanFolder(string folder)
+        private HashSet<SpotlightPicture> ScanFolder(string folder)
         {
             if (string.IsNullOrWhiteSpace(folder))
             {
                 throw new ArgumentException("Invalid target folder specified (null, empty, or whitespaces only)");
             }
 
-            var hashes = new Dictionary<string, SpotlightPicture>();
+            var foundPictures = new HashSet<SpotlightPicture>();
 
-            if (Directory.Exists(folder))
+            if (!Directory.Exists(folder)) return foundPictures;
+            
+            foreach (var pictureFile in Directory.GetFiles(folder, "*.jpg"))
             {
-                foreach (var fullPath in Directory.GetFiles(folder, "*.jpg"))
+                var image = Image.FromFile(pictureFile);
+                if (image.RawFormat.Equals(ImageFormat.Jpeg))
                 {
-                    var image = Image.FromFile(fullPath);
-                    if (image.RawFormat.Equals(ImageFormat.Jpeg))
+                    var hash = ProcessImage(image);
+                        
+                    var existingPicture = foundPictures
+                        .FirstOrDefault(m => m.Hash.Equals(hash));
+                        
+                    if (existingPicture == null)
                     {
-                        var hash = ProcessImage(image);
-                        if (hashes.ContainsKey(hash))
-                        {
-                            var existing = hashes[hash];
-                            WriteLine($"{existing.Path} has the same hash as {fullPath}");
-                        }
-                        else
-                        {
-                            hashes.Add(hash, new SpotlightPicture() { Hash = hash, Path = fullPath});
-                        }
+                        foundPictures.Add(new SpotlightPicture(hash, pictureFile));
+                    }
+                    else
+                    {
+                        WriteLine($"{existingPicture.Path} has the same hash as {pictureFile}");
                     }
                 }
             }
 
-            return hashes;
+            return foundPictures;
         }
 
         private float GenerateScore(Image original, Image copy)
