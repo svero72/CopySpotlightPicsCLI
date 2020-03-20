@@ -66,11 +66,11 @@ namespace Svero.CopySpotlightPics
                         var image = Image.FromFile(candidateFile);
                         if (!image.RawFormat.Equals(ImageFormat.Jpeg))
                         {
-                            WriteLine($"Skip {candidateFile} - Wrong format ({image.RawFormat})");
+                            // WriteLine($"Skip {candidateFile} - Wrong format ({image.RawFormat})");
                         }
                         else if (image.Width < 1600)
                         {
-                            WriteLine($"Skip {candidateFile} - Wrong width ({image.Width})");
+                            // WriteLine($"Skip {candidateFile} - Wrong width ({image.Width})");
                         }
                         else
                         {
