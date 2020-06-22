@@ -2,8 +2,11 @@
 bin/
 obj/
 
-# Visual Studio Code
+# Microsoft Visual Studio Code
 .vscode/
+
+# Microsoft Visual Studio
+.vs/
 
 # JetBrains
 .idea/
