@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
-using Svero.CopySpotlightPics.Models;
+using System.Runtime.InteropServices;
 using static System.Console;
 
 namespace Svero.CopySpotlightPics
@@ -20,6 +17,11 @@ namespace Svero.CopySpotlightPics
 
         private static void Main(string[] args)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
+            }
+            
             if (args.Length < 1)
             {
                 WriteLine("Usage: dotnet run [<source_folder>] <target_folder>");
