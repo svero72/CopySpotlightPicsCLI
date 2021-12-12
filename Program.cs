@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using static System.Console;
 
 namespace Svero.CopySpotlightPics
@@ -15,6 +16,11 @@ namespace Svero.CopySpotlightPics
         private const string DefaultAssetPath =
             @"Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets";
 
+		///<summary>
+		///Entry point for the application
+		///</summary>
+        /// <param name="args">String array with command-line arguments</param>
+		[SupportedOSPlatform("Windows7.0")]
         private static void Main(string[] args)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

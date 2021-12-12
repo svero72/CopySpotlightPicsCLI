@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using Svero.CopySpotlightPics.Models;
 
 using static System.Console;
@@ -16,6 +17,7 @@ namespace Svero.CopySpotlightPics
     /// Implements several methods for handling images.
     /// </summary>
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	[SupportedOSPlatform("windows7.0")]
     public static class ImageTools
     {
         /// <summary>

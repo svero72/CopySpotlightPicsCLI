@@ -11,3 +11,6 @@ obj/
 # JetBrains
 .idea/
 *.iml
+
+# Others
+*.bak
