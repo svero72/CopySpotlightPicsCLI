@@ -66,21 +66,18 @@ namespace Svero.CopySpotlightPics
             if (Directory.Exists(sourceFolder))
             {
                 var counter = 0;
+                
+                WriteLine($"Source folder: {sourceFolder}");
+                WriteLine($"Target folder: {targetFolder}");
+                WriteLine();
 
                 foreach (var candidateFile in Directory.GetFiles(sourceFolder))
                 {
                     try
                     {
                         var image = Image.FromFile(candidateFile);
-                        if (!image.RawFormat.Equals(ImageFormat.Jpeg))
-                        {
-                            // WriteLine($"Skip {candidateFile} - Wrong format ({image.RawFormat})");
-                        }
-                        else if (image.Width < 1600)
-                        {
-                            // WriteLine($"Skip {candidateFile} - Wrong width ({image.Width})");
-                        }
-                        else
+                        
+                        if (image.RawFormat.Equals(ImageFormat.Jpeg) && image.Width >= 1600)
                         {
                             var fileName = Path.GetFileName(candidateFile);
                             var hash = ImageTools.ProcessImage(image);
@@ -100,13 +97,13 @@ namespace Svero.CopySpotlightPics
                                 }
 
                                 WriteLine(
-                                    $"{fileName} seems to be new - copying it to {targetFolder} " +
-                                    $"as {targetFilename}");
+                                    $"{fileName} seems to be new - copying it as {targetFilename}");
                                 File.Copy(candidateFile, targetFullPath, false);
                             }
                             else
                             {
-                                WriteLine($"Skip {candidateFile} - It already exists as {picture.Path}");
+                                var pictureId = Path.GetFileNameWithoutExtension(picture.Path);
+                                WriteLine($"Skip {fileName} - It already exists with ID {pictureId}");
                             }
                         }
                     }
@@ -117,7 +114,17 @@ namespace Svero.CopySpotlightPics
                     }
                 }
 
-                WriteLine($"Number of copied images: {counter}");
+                WriteLine();
+                
+                if (counter > 0)
+                {
+                    WriteLine($"Number of copied images: {counter}");
+                }
+                else
+                {
+                    WriteLine("No new wallpapers were copied");
+                }
+                
             }
             else
             {
