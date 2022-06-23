@@ -4,7 +4,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using static System.Console;
+using static Svero.CopySpotlightPics.ConsoleHelper;
 
 namespace Svero.CopySpotlightPics
 {
@@ -30,7 +30,7 @@ namespace Svero.CopySpotlightPics
             
             if (args.Length < 1)
             {
-                WriteLine("Usage: dotnet run [<source_folder>] <target_folder>");
+                WriteMessage("Usage: dotnet run [<source_folder>] <target_folder>", ConsoleColor.Yellow);
                 return;
             }
 
@@ -50,12 +50,12 @@ namespace Svero.CopySpotlightPics
 
             if (!Directory.Exists(sourceFolder))
             {
-                WriteLine($"The source folder {sourceFolder} does not exist");
+                WriteMessage($"The source folder {sourceFolder} does not exist", ConsoleColor.Yellow);
             }
 
             if (!Directory.Exists(targetFolder))
             {
-                WriteLine($"Creating target folder \"{targetFolder}\"");
+                WriteMessage($"Creating target folder \"{targetFolder}\"", ConsoleColor.Yellow);
                 Directory.CreateDirectory(targetFolder);
             }
 
@@ -67,9 +67,9 @@ namespace Svero.CopySpotlightPics
             {
                 var counter = 0;
                 
-                WriteLine($"Source folder: {sourceFolder}");
-                WriteLine($"Target folder: {targetFolder}");
-                WriteLine();
+                WriteMessage($"Source folder: {sourceFolder}", ConsoleColor.Gray);
+                WriteMessage($"Target folder: {targetFolder}", ConsoleColor.Gray);
+                WriteMessage(string.Empty);
 
                 foreach (var candidateFile in Directory.GetFiles(sourceFolder))
                 {
@@ -96,39 +96,43 @@ namespace Svero.CopySpotlightPics
                                     targetFullPath = Path.Combine(targetFolder, targetFilename);
                                 }
 
-                                WriteLine(
-                                    $"{fileName} seems to be new - copying it as {targetFilename}");
+                                WriteMessage(
+                                    $"{fileName} seems to be new - copying it as {targetFilename}", 
+                                    ConsoleColor.Green);
                                 File.Copy(candidateFile, targetFullPath, false);
                             }
                             else
                             {
                                 var pictureId = Path.GetFileNameWithoutExtension(picture.Path);
-                                WriteLine($"Skip {fileName} - It already exists with ID {pictureId}");
+                                WriteMessage(
+                                    $"Skip {fileName} - It already exists with ID {pictureId}", 
+                                    ConsoleColor.Gray);
                             }
                         }
                     }
                     catch (OutOfMemoryException ex)
                     {
-                        WriteLine($"The file {candidateFile} is not a valid image or has an " +
-                                  $"unsupported format: {ex.Message}");
+                        WriteMessage(
+                            $"The file {candidateFile} is not a valid image or has an unsupported format: {ex.Message}",
+                            ConsoleColor.Red);
                     }
                 }
 
-                WriteLine();
+                WriteMessage(string.Empty);
                 
                 if (counter > 0)
                 {
-                    WriteLine($"Number of copied images: {counter}");
+                    WriteMessage($"Number of copied images: {counter}", ConsoleColor.Green);
                 }
                 else
                 {
-                    WriteLine("No new wallpapers were copied");
+                    WriteMessage("No new wallpapers were copied", ConsoleColor.Yellow);
                 }
                 
             }
             else
             {
-                WriteLine($"Path \"{sourceFolder}\" not found");
+                WriteMessage($"Path \"{sourceFolder}\" not found", ConsoleColor.Red);
             }
         }
     }
