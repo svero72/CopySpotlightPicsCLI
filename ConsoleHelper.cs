@@ -25,6 +25,8 @@ public static class ConsoleHelper
     {
         if (string.IsNullOrWhiteSpace(message))
         {
+            // Just an empty line
+            Console.WriteLine();
             return;
         }
 
