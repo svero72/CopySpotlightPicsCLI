@@ -29,16 +29,13 @@ namespace Svero.CopySpotlightPics
         /// <returns>True if a similar picture was found, otherwise false</returns>
         public static bool Exists(string pictureCode, IEnumerable<SpotlightPicture> pictures)
         {
+            ArgumentNullException.ThrowIfNull(pictures);
+
             if (string.IsNullOrWhiteSpace(pictureCode))
             {
                 throw new ArgumentException("Invalid picture code");
             }
 
-            if (pictures == null)
-            {
-                throw new ArgumentNullException(nameof(pictures));
-            }
-            
             return pictures.Any(pictureToCheck => 
                 GenerateScore(pictureToCheck.PictureCode, pictureCode) > 0.95f);
         }
@@ -57,11 +54,9 @@ namespace Svero.CopySpotlightPics
                 throw new ArgumentException("Invalid picture code");
             }
 
-            if (pictures == null)
-            {
-                throw new ArgumentNullException(nameof(pictures));
-            }
-            
+            ArgumentNullException.ThrowIfNull(pictures);
+
+
             return pictures.FirstOrDefault(currentPicture => GenerateScore(currentPicture.PictureCode, 
                 pictureCode) > 0.95f);
         }
@@ -132,16 +127,9 @@ namespace Svero.CopySpotlightPics
         /// <exception cref="ArgumentNullException">If one of the specified instances is null</exception>
         public static float GenerateScore(Image imageA, Image imageB)
         {
-            if (imageA == null)
-            {
-                throw new ArgumentNullException(nameof(imageA));
-            }
+            ArgumentNullException.ThrowIfNull(imageA);
+            ArgumentNullException.ThrowIfNull(imageB);
 
-            if (imageB == null)
-            {
-                throw new ArgumentNullException(nameof(imageB));
-            }
-            
             var hashCodeOriginal = ProcessImage(imageA);
             var hashCodeCopy = ProcessImage(imageB);
 
@@ -180,11 +168,8 @@ namespace Svero.CopySpotlightPics
         /// <exception cref="ArgumentNullException">If the image is null</exception>
         public static string ProcessImage(Image image)
         {
-            if (image == null)
-            {
-                throw new ArgumentNullException(nameof(image));
-            }
-            
+            ArgumentNullException.ThrowIfNull(image);
+
             var scaled = ScaleTo(image, 9, 9, InterpolationMode.High);
             var monochrome = ToMonochrome(scaled);
             var pictureCode = GeneratePictureCode(monochrome);
@@ -205,10 +190,7 @@ namespace Svero.CopySpotlightPics
         /// <exception cref="ArgumentOutOfRangeException">If the height or width is outside the allowed range)</exception>
         public static Bitmap ScaleTo(Image original, int targetWidth, int targetHeight, InterpolationMode mode)
         {
-            if (original == null)
-            {
-                throw new ArgumentNullException(nameof(original));
-            }
+            ArgumentNullException.ThrowIfNull(original);
 
             if (targetWidth < 1)
             {
@@ -241,11 +223,8 @@ namespace Svero.CopySpotlightPics
         /// <exception cref="ArgumentNullException">If the image is null</exception>
         public static Bitmap ToMonochrome(Image image)
         {
-            if (image == null)
-            {
-                throw new ArgumentNullException(nameof(image));
-            }
-            
+            ArgumentNullException.ThrowIfNull(image);
+
             var colorMatrix = new ColorMatrix(new[]
             {
                 new[] {0.299f, 0.299f, 0.299f, 0.000f, 0.000f},
@@ -284,11 +263,8 @@ namespace Svero.CopySpotlightPics
         /// <exception cref="ArgumentNullException">If the specified bitmap is null</exception>
         public static string GeneratePictureCode(Bitmap bitmap)
         {
-            if (bitmap == null)
-            {
-                throw new ArgumentNullException(nameof(bitmap));
-            }
-            
+            ArgumentNullException.ThrowIfNull(bitmap);
+
             var rowHashCode = string.Empty;
             var colHashCode = string.Empty;
 
@@ -324,6 +300,5 @@ namespace Svero.CopySpotlightPics
 
             return $"{rowHashCode},{colHashCode}";
         }
-
     }
 }

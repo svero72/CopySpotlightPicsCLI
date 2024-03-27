@@ -20,7 +20,7 @@ namespace Svero.CopySpotlightPics
 		///Entry point for the application
 		///</summary>
         /// <param name="args">String array with command-line arguments</param>
-		[SupportedOSPlatform("Windows7.0")]
+		[SupportedOSPlatform("Windows10.0")]
         private static void Main(string[] args)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
