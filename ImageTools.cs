@@ -105,7 +105,7 @@ namespace Svero.CopySpotlightPics
                         }
                         else
                         {
-                            WriteLine($"{existingPicture.Path} has the same hash as {pictureFile}");
+                            WriteLine($"{pictureFile} has the same hash as {existingPicture.Path} - skipped");
                         }
                     }
                 }
@@ -206,8 +206,8 @@ namespace Svero.CopySpotlightPics
 
             using (Graphics graphics = Graphics.FromImage(target))
             {
-                RectangleF sourceRect = new RectangleF(-0.5f, -0.5f, original.Width, original.Height);
-                Rectangle targetRect = new Rectangle(0, 0, targetWidth, targetHeight);
+                RectangleF sourceRect = new(-0.5f, -0.5f, original.Width, original.Height);
+                Rectangle targetRect = new(0, 0, targetWidth, targetHeight);
                 graphics.InterpolationMode = mode;
                 graphics.DrawImage(original, targetRect, sourceRect, GraphicsUnit.Pixel);
             }
@@ -225,23 +225,23 @@ namespace Svero.CopySpotlightPics
         {
             ArgumentNullException.ThrowIfNull(image);
 
-            var colorMatrix = new ColorMatrix(new[]
-            {
-                new[] {0.299f, 0.299f, 0.299f, 0.000f, 0.000f},
-                new[] {0.587f, 0.587f, 0.587f, 0.000f, 0.000f},
-                new[] {0.114f, 0.114f, 0.114f, 0.000f, 0.000f},
-                new[] {0.000f, 0.000f, 0.000f, 1.000f, 0.000f},
-                new[] {0.000f, 0.000f, 0.000f, 0.000f, 1.000f}
-            });
+            var colorMatrix = new ColorMatrix(
+            [
+                [0.299f, 0.299f, 0.299f, 0.000f, 0.000f],
+                [0.587f, 0.587f, 0.587f, 0.000f, 0.000f],
+                [0.114f, 0.114f, 0.114f, 0.000f, 0.000f],
+                [0.000f, 0.000f, 0.000f, 1.000f, 0.000f],
+                [0.000f, 0.000f, 0.000f, 0.000f, 1.000f]
+            ]);
 
             var attributes = new ImageAttributes();
             attributes.SetColorMatrix(colorMatrix);
 
             Point[] points =
             {
-                new Point(0, 0),
-                new Point(image.Width, 0),
-                new Point(0, image.Height)
+                new(0, 0),
+                new(image.Width, 0),
+                new(0, image.Height)
             };
 
             var rectangle = new Rectangle(0, 0, image.Width, image.Height);
